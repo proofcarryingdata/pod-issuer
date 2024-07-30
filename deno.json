@@ -1,0 +1,20 @@
+{
+  "tasks": {
+    "dev": "deno run --watch --cached-only --allow-env --allow-read=./ --allow-write=./ --allow-net src/index.ts"
+  },
+  "vendor": true,
+  "imports": {
+    "@pcd/pod": "npm:@pcd/pod@^0.2.0",
+    "@pcd/pod-pcd": "npm:@pcd/pod-pcd@^0.2.0",
+    "@pcd/semaphore-signature-pcd": "npm:@pcd/semaphore-signature-pcd@^0.11.2",
+    "@std/path": "jsr:@std/path@^1.0.1",
+    "@types/express": "npm:@types/express@^4.17.21",
+    "body-parser": "npm:body-parser@^1.20.2",
+    "cors": "npm:cors@^2.8.5",
+    "express": "npm:express@^4.19.2",
+    "express-basic-auth": "npm:express-basic-auth@^1.2.1",
+    "json-bigint": "npm:json-bigint@^1.0.0",
+    "uuid": "npm:uuid@^10.0.0"
+  },
+  "unstable": ["kv"]
+}

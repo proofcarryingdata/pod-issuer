@@ -1,0 +1,28 @@
+#+TITLE: POD Issuer
+#+SUBTITLE: A POD mint implementation
+
+* Description
+This is an implementation of a POD issuer compatible with the Zupass passport client.
+
+* Dependencies
+This server requires the [[https://deno.com/][Deno JavaScript runtime]]. The relevant JS/TS dependencies may be downloaded and patched by running the following command in the project root:
+#+BEGIN_SRC sh
+  make
+#+END_SRC
+
+* Running
+This server may be started by running the following command in the project root:
+#+BEGIN_SRC sh
+  deno task dev
+#+END_SRC
+
+* Admin interface
+The admin interface may be accessed by navigating to =/addPOD= in the browser and using the credentials in =credentials.json=. By default, it will be available at http://localhost:4000/addPOD. The administrator may then specify the entries of a POD that users may claim. After adding a POD, a 'mint link' (as well as a QR code corresponding to it) will be presented; the link/code would then be distributed to eligible users to 'mint' their PODs, i.e. claim PODs with the entries specified earlier together with their identity commitment in the =owner= field. PODs may be removed from the list of 'mintable' PODs at any time.
+
+* Configuration
+The server may be configured via the =credentials.json= and =serverConfig.json= files. The former should be a JSON mapping usernames (strings) to passwords (strings), whereas the latter is a JSON containing the following configuration parameters:
+- =hostname=: The hostname to listen on (=string=).
+- =port=: The port to listen on (=number=).
+- =mintUrl=: The URL of this server. In production, this should be the internet-facing address.
+- =zupassUrl=: The URL of the Zupass passport client.
+- =defaultPrivateKey=: The default (Baby Jubjub) private key to sign PODs with. This should be a hex or base64 string.

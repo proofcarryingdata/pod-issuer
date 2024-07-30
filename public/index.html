@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>POD issuer</title>
+    <style>
+      body {
+          font-family: sans-serif;
+      }
+      .content {
+          max-width: 500px;
+          margin: auto;
+      }
+      textarea {
+          width: 100%;
+      }
+      p {
+          text-align: center;
+      }
+    </style>
+    <!-- QR code generator. -->
+    <script src="https://unpkg.com/@bitjson/qr-code@1.0.2/dist/qr-code.js"></script>
+  </head>
+  <body>
+    <div class="content">
+    <h1>🌈 POD issuer ✨</h1>
+    <form id="podEntries">
+      <div>
+        <label for="podJSON">POD to issue:</label><br>
+        <textarea id="podJSON" name="podJSON" rows="20"></textarea>
+      </div>
+      <div>
+        <label for="signerPrivateKey"
+          >Private key to sign with (blank = server default):</label
+        >
+        <input type="text" id="signerPrivateKey" name="signerPrivateKey">
+      </div>
+      <div>
+        <label for="podFolder">Folder to add POD to:</label>
+        <input type="text" id="podFolder" name="podFolder">
+      </div>
+      <div>
+        <input type="submit" value="Add">
+      </div>
+    </form>
+    <p id="currentMint"></p>
+    <h2>Mintable PODs:</h2>
+    <p id="mintablePODs"></p>
+    <script src="index.js" type="module"></script>
+    </div>
+  </body>
+</html>
