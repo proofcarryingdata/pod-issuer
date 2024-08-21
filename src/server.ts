@@ -1,4 +1,6 @@
-import { podEntriesFromSimplifiedJSON } from "@pcd/pod";
+import { EmailPCD, EmailPCDPackage } from "@pcd/email-pcd";
+import { podEntriesFromSimplifiedJSON, serializePODEntries } from "@pcd/pod";
+import { PODPCD, PODPCDPackage } from "@pcd/pod-pcd";
 import {
   SemaphoreSignaturePCD,
   SemaphoreSignaturePCDPackage,
@@ -12,7 +14,9 @@ import {
   addMintablePOD,
   getMintablePODs,
   getMintLink,
+  getPODContent,
   mintPOD,
+  mintPODAndSerialise,
   removeMintablePOD,
 } from "./util.ts";
 
@@ -47,9 +51,6 @@ export const serverStart = () => {
 
   // Admin page for adding mintable PODs.
   app.use("/addPOD", express.static(siteDir));
-  // app.get("/addPOD", (_req, res) => {
-  //   res.sendFile(path.join(siteDir, "index.html"));
-  // });
 
   // Mintable POD getter for admin page.
   app.get("/api/getMintablePODs", (_req, res) => {
@@ -63,23 +64,84 @@ export const serverStart = () => {
     res.status(200).send(`POD ${podId} successfully removed.`);
   });
 
+  // POD content fetcher for users.
+  app.get("/api/getPODContent/:podId", (req, res) => {
+    const podContent = getPODContent(req.params.podId);
+    if (podContent) {
+      res.send(serializePODEntries(podContent));
+    } else {
+      res.status(404).send(`POD ${req.params.podId} not found.`);
+    }
+  });
+
   // POD minting API for users.
   app.post("/api/mintPOD", async (req, res) => {
     try {
       const contentIDString = req.body.contentID;
-      const semaphoreSigPCD: SemaphoreSignaturePCD =
-        (await SemaphoreSignaturePCDPackage.deserialize(
-          req.body.semaphoreSignaturePCD.pcd,
-        )) as SemaphoreSignaturePCD;
 
-      const serialisedMintedPOD = await mintPOD(
+      const pcd: SemaphoreSignaturePCD | EmailPCD =
+        req.body.semaphoreSignaturePCD
+          ? (await SemaphoreSignaturePCDPackage.deserialize(
+            req.body.semaphoreSignaturePCD.pcd,
+          )) as SemaphoreSignaturePCD
+          : req.body.emailPCD
+          ? (await EmailPCDPackage.deserialize(
+            req.body.emailPCD.pcd,
+          )) as EmailPCD
+          : (() => {
+            throw new TypeError("Missing identity-proving PCD.");
+          })();
+
+      // TODO: Timestamp check for Semaphore signature PCD.
+
+      const serialisedMintedPOD = await mintPODAndSerialise(
         contentIDString,
-        semaphoreSigPCD,
+        pcd,
       );
+
       res.send(serialisedMintedPOD);
     } catch (e) {
       res.status(400).send(String(e));
-      throw e;
+    }
+  });
+
+  /*
+
+   */
+  // Alternative POD minting API for users that returns a serialised PODPCD.
+  app.post("/api/sign", async (req, res) => {
+    try {
+      const contentIDString = req.body.contentID;
+
+      const pcd: SemaphoreSignaturePCD | EmailPCD =
+        req.body.semaphoreSignaturePCD
+          ? (await SemaphoreSignaturePCDPackage.deserialize(
+            req.body.semaphoreSignaturePCD.pcd,
+          )) as SemaphoreSignaturePCD
+          : req.body.emailPCD
+          ? (await EmailPCDPackage.deserialize(
+            req.body.emailPCD.pcd,
+          )) as EmailPCD
+          : (() => {
+            throw new TypeError("Missing identity-proving PCD.");
+          })();
+
+      // TODO: Timestamp check for Semaphore signature PCD.
+
+      const mintedPOD = await mintPOD(
+        contentIDString,
+        pcd,
+      );
+
+      const mintedPODPCD = new PODPCD(crypto.randomUUID(), mintedPOD);
+
+      const serialisedMintedPODPCD = await PODPCDPackage.serialize(
+        mintedPODPCD,
+      );
+
+      res.send(serialisedMintedPODPCD);
+    } catch (e) {
+      res.status(400).send(String(e));
     }
   });
 

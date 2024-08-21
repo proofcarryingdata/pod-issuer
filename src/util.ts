@@ -1,4 +1,5 @@
-import { POD } from "@pcd/pod";
+import { EmailPCD, EmailPCDPackage } from "@pcd/email-pcd";
+import { POD, PODEntries } from "@pcd/pod";
 import { PODPCD, PODPCDPackage } from "@pcd/pod-pcd";
 import {
   SemaphoreSignaturePCD,
@@ -20,6 +21,7 @@ import { PODSignRequest, PODStore, ServerConfig } from "./types.ts";
  */
 const createPODFromSignRequest = async (
   podEntrySignRequest: PODSignRequest,
+  includeTimestamp?: boolean,
 ): Promise<POD> => {
   const podEntries = podEntrySignRequest.podEntries;
   const podSignerPrivateKey = podEntrySignRequest.signerPrivateKey === "" ||
@@ -31,13 +33,17 @@ const createPODFromSignRequest = async (
     ? "PODs"
     : podEntrySignRequest.podFolder;
   if (podEntrySignRequest.owner !== undefined) {
-    podEntries.owner = {
+    podEntries["owner"] = {
       type: "cryptographic",
       value: podEntrySignRequest.owner,
     };
   } else {
-    // Strip out the owner field in case it's there.
     delete podEntries.owner;
+  }
+
+  // Include timestamp if necessary.
+  if (includeTimestamp) {
+    podEntries.timestamp = { type: "int", value: BigInt(Date.now()) };
   }
 
   const pod = POD.sign(podEntries, podSignerPrivateKey);
@@ -90,7 +96,13 @@ const createMintUrl =
   };
 
 /**
- * Gets mintable PODs as array of objects containing POD names and content IDs.
+ * Gets single mintable POD content.
+ */
+export const getPODContent = (podId: string): PODEntries | undefined =>
+  podStore[podId].podEntries;
+
+/**
+ * Gets mintable PODs as array of objects containing POD names and descriptions.
  */
 export const getMintablePODs = () =>
   Object.fromEntries(
@@ -118,36 +130,50 @@ export const removeMintablePOD = async (podId: string): Promise<void> => {
 };
 
 /**
- * Mints a POD, i.e. it takes an ownerless POD ID and a semaphore signature PCD, verifies the latter
+ * Mints a POD, i.e. it takes an ownerless POD ID and an identity-proving PCD, viz. a semaphore signature PCD or email PCD, verifies the latter
  * and issues a POD to the owner of the signature PCD in JSON-serialised form.
  */
 export const mintPOD = async (
   podId: string,
-  semaphoreSigPCD: SemaphoreSignaturePCD,
-): Promise<string> => {
-  // Check semaphore signature PCD and extract identity commitment.
-  const ownerCommitment = semaphoreSigPCD.claim.identityCommitment;
-
-  const isValidSemaphoreSigPCD = await SemaphoreSignaturePCDPackage.verify(
-    semaphoreSigPCD,
-  );
+  pcd: SemaphoreSignaturePCD | EmailPCD,
+): Promise<POD> => {
+  // Check PCD and extract identity commitment.
+  const [ownerCommitment, isValidPCD] = await (async () => {
+    if (pcd instanceof EmailPCD) {
+      return [pcd.claim.semaphoreId, await EmailPCDPackage.verify(pcd)];
+    } else if (pcd instanceof SemaphoreSignaturePCD) {
+      return [
+        pcd.claim.identityCommitment,
+        await SemaphoreSignaturePCDPackage.verify(pcd),
+      ];
+    } else {
+      throw new TypeError("Invalid identity-proving PCD.");
+    }
+  })();
 
   const podSignRequest = podStore[podId];
   if (podSignRequest !== undefined) {
     // Check owner commitment.
-    if (!isValidSemaphoreSigPCD) {
+    if (!isValidPCD) {
       throw new Error("Invalid identity commitment.");
     } else {
       const mintedPOD = await createPODFromSignRequest({
         ...podSignRequest,
         owner: BigInt(ownerCommitment),
-      });
-      const serialisedMintedPOD = mintedPOD.serialize();
-      return serialisedMintedPOD;
+      }, pcd instanceof EmailPCD);
+      return mintedPOD;
     }
   } else {
     throw new Error("Invalid content ID.");
   }
+};
+
+export const mintPODAndSerialise = async (
+  podId: string,
+  pcd: SemaphoreSignaturePCD | EmailPCD,
+): Promise<string> => {
+  const mintedPOD = await mintPOD(podId, pcd);
+  return mintedPOD.serialize();
 };
 
 /**

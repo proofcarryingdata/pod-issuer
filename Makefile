@@ -6,7 +6,7 @@ cache:
 
 patch:
 	@echo "Patching dependencies..."
-	@./scripts/patch-cjs.sh
+#	@./scripts/patch-cjs.sh
 	@./scripts/patch-ffjavascript.sh
 
 clean:
