@@ -1,3 +1,4 @@
+import _artifacts from "@pcd/proto-pod-gpc-artifacts";
 import { serverConfig } from "./constants.ts";
 import { serverStart } from "./server.ts";
 

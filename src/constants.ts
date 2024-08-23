@@ -1,6 +1,14 @@
+import { GPCPCDPackage } from "@pcd/gpc-pcd";
 import * as path from "@std/path";
 import JSONBig from "json-bigint";
 import { PODStore } from "./types.ts";
+
+// Timestamp expiry time = 1 minute
+export const TIMESTAMP_EXPIRY_TIME = 60000;
+
+// Initialise GPCPCDPackage
+const zkArtifactPath = path.join(import.meta.dirname, "..", "node_modules/.deno/@pcd+proto-pod-gpc-artifacts@0.5.0/node_modules/@pcd/proto-pod-gpc-artifacts");
+await GPCPCDPackage.init({zkArtifactPath});
 
 export const jsonBig = JSONBig({
   useNativeBigInt: true,

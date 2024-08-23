@@ -1,18 +1,20 @@
 import { EmailPCD, EmailPCDPackage } from "@pcd/email-pcd";
+import { GPCPCD, GPCPCDPackage } from "@pcd/gpc-pcd";
 import { POD, PODEntries } from "@pcd/pod";
 import { PODPCD, PODPCDPackage } from "@pcd/pod-pcd";
 import {
-  SemaphoreSignaturePCD,
-  SemaphoreSignaturePCDPackage,
+    SemaphoreSignaturePCD,
+    SemaphoreSignaturePCDPackage,
 } from "@pcd/semaphore-signature-pcd";
 import * as path from "@std/path";
 import { v4 as uuid } from "uuid";
 import {
-  dataDir,
-  jsonBig,
-  podStore,
-  podStoreFile,
-  serverConfig,
+    TIMESTAMP_EXPIRY_TIME,
+    dataDir,
+    jsonBig,
+    podStore,
+    podStoreFile,
+    serverConfig,
 } from "./constants.ts";
 import { PODSignRequest, PODStore, ServerConfig } from "./types.ts";
 
@@ -129,14 +131,16 @@ export const removeMintablePOD = async (podId: string): Promise<void> => {
   }
 };
 
+// TODO: Clean up!
 /**
  * Mints a POD, i.e. it takes an ownerless POD ID and an identity-proving PCD, viz. a semaphore signature PCD or email PCD, verifies the latter
  * and issues a POD to the owner of the signature PCD in JSON-serialised form.
  */
 export const mintPOD = async (
   podId: string,
-  pcd: SemaphoreSignaturePCD | EmailPCD,
+  pcd: SemaphoreSignaturePCD | EmailPCD | GPCPCD,
 ): Promise<POD> => {
+  // Nullifier check for GPCPCD
   // Check PCD and extract identity commitment.
   const [ownerCommitment, isValidPCD] = await (async () => {
     if (pcd instanceof EmailPCD) {
@@ -145,6 +149,24 @@ export const mintPOD = async (
       return [
         pcd.claim.identityCommitment,
         await SemaphoreSignaturePCDPackage.verify(pcd),
+      ];
+    } else if (pcd instanceof GPCPCD) {
+      // Check timestamp and GPC proof.
+      const currentTime = BigInt(Date.now());
+      const timestampString =pcd.claim.revealed.owner?.externalNullifier?.value;
+      const nullifierHash = pcd.claim.revealed.owner?.nullifierHash;
+      if (!nullifierHash) {
+        return [0n, false];
+      } else if (podStore[podId]?.nullifiers?.[String(nullifierHash)]) {
+        throw new Error("GPC identity proof nullifier already used.");
+      }
+      return [
+        pcd.claim.revealed.pods.pod0?.entries.owner?.value ?? 0n,
+        pcd.claim.config.pods.pod0.entries.owner.isRevealed && 
+        pcd.claim.config.pods.pod0.entries.owner.isOwnerID 
+          && timestampString &&
+          ((currentTime - BigInt(timestampString)) < TIMESTAMP_EXPIRY_TIME) &&
+          await GPCPCDPackage.verify(pcd)
       ];
     } else {
       throw new TypeError("Invalid identity-proving PCD.");
@@ -161,6 +183,15 @@ export const mintPOD = async (
         ...podSignRequest,
         owner: BigInt(ownerCommitment),
       }, pcd instanceof EmailPCD);
+
+      // Nullify in case of GPCPCD
+      if(pcd instanceof GPCPCD) {
+      if(!podStore[podId].nullifiers) {
+        podStore[podId].nullifiers = {};
+      }
+        podStore[podId].nullifiers[String(pcd.claim.revealed.owner.nullifierHash)] = true;
+      }
+      
       return mintedPOD;
     }
   } else {
@@ -170,7 +201,7 @@ export const mintPOD = async (
 
 export const mintPODAndSerialise = async (
   podId: string,
-  pcd: SemaphoreSignaturePCD | EmailPCD,
+  pcd: SemaphoreSignaturePCD | EmailPCD | GPCPCD,
 ): Promise<string> => {
   const mintedPOD = await mintPOD(podId, pcd);
   return mintedPOD.serialize();
@@ -200,3 +231,8 @@ export const addMintablePOD = async (
  */
 export const getMintLink = (podId: string): string | undefined =>
   podStore[podId].mintLink;
+
+// /**
+//  *
+//  */
+// export const isNullified = (

@@ -9,6 +9,7 @@ export type PODStore = Record<
     signerPrivateKey: string;
     podFolder: string;
     mintLink: string;
+    nullifiers?: Record<string, boolean>
   }
 >;
 

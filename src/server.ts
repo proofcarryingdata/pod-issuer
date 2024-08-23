@@ -1,9 +1,10 @@
 import { EmailPCD, EmailPCDPackage } from "@pcd/email-pcd";
+import { GPCPCD, GPCPCDPackage } from "@pcd/gpc-pcd";
 import { podEntriesFromSimplifiedJSON, serializePODEntries } from "@pcd/pod";
 import { PODPCD, PODPCDPackage } from "@pcd/pod-pcd";
 import {
-  SemaphoreSignaturePCD,
-  SemaphoreSignaturePCDPackage,
+    SemaphoreSignaturePCD,
+    SemaphoreSignaturePCDPackage,
 } from "@pcd/semaphore-signature-pcd";
 import bodyParser from "body-parser";
 import cors from "cors";
@@ -11,13 +12,13 @@ import express from "express";
 import basicAuth from "express-basic-auth";
 import { credentials, serverConfig, siteDir } from "./constants.ts";
 import {
-  addMintablePOD,
-  getMintablePODs,
-  getMintLink,
-  getPODContent,
-  mintPOD,
-  mintPODAndSerialise,
-  removeMintablePOD,
+    addMintablePOD,
+    getMintLink,
+    getMintablePODs,
+    getPODContent,
+    mintPOD,
+    mintPODAndSerialise,
+    removeMintablePOD,
 } from "./util.ts";
 
 /**
@@ -79,7 +80,7 @@ export const serverStart = () => {
     try {
       const contentIDString = req.body.contentID;
 
-      const pcd: SemaphoreSignaturePCD | EmailPCD =
+      const pcd: SemaphoreSignaturePCD | EmailPCD | GPCPCD =
         req.body.semaphoreSignaturePCD
           ? (await SemaphoreSignaturePCDPackage.deserialize(
             req.body.semaphoreSignaturePCD.pcd,
@@ -88,6 +89,10 @@ export const serverStart = () => {
           ? (await EmailPCDPackage.deserialize(
             req.body.emailPCD.pcd,
           )) as EmailPCD
+        : req.body.gpcPCD
+        ? (await GPCPCDPackage.deserialize(
+          req.body.gpcPCD.pcd
+        )) as GPCPCD
           : (() => {
             throw new TypeError("Missing identity-proving PCD.");
           })();
@@ -113,7 +118,7 @@ export const serverStart = () => {
     try {
       const contentIDString = req.body.contentID;
 
-      const pcd: SemaphoreSignaturePCD | EmailPCD =
+      const pcd: SemaphoreSignaturePCD | EmailPCD | GPCPCD =
         req.body.semaphoreSignaturePCD
           ? (await SemaphoreSignaturePCDPackage.deserialize(
             req.body.semaphoreSignaturePCD.pcd,
@@ -122,6 +127,10 @@ export const serverStart = () => {
           ? (await EmailPCDPackage.deserialize(
             req.body.emailPCD.pcd,
           )) as EmailPCD
+        : req.body.gpcPCD
+        ? (await GPCPCDPackage.deserialize(
+          req.body.gpcPCD.pcd
+        )) as GPCPCD
           : (() => {
             throw new TypeError("Missing identity-proving PCD.");
           })();
