@@ -1,6 +1,6 @@
 import { EmailPCD, EmailPCDPackage } from "@pcd/email-pcd";
 import { GPCPCD, GPCPCDPackage } from "@pcd/gpc-pcd";
-import { podEntriesFromSimplifiedJSON, serializePODEntries } from "@pcd/pod";
+import { podEntriesFromJSON } from "@pcd/pod";
 import { PODPCD, PODPCDPackage } from "@pcd/pod-pcd";
 import {
     SemaphoreSignaturePCD,
@@ -69,7 +69,7 @@ export const serverStart = () => {
   app.get("/api/getPODContent/:podId", (req, res) => {
     const podContent = getPODContent(req.params.podId);
     if (podContent) {
-      res.send(serializePODEntries(podContent));
+      res.send(JSON.stringify(podContent.toJSON()));
     } else {
       res.status(404).send(`POD ${req.params.podId} not found.`);
     }
@@ -170,7 +170,7 @@ export const serverStart = () => {
   // Mintable POD adder for admin page.
   app.post("/api/addMintablePOD", async (req, res) => {
     try {
-      const podEntries = podEntriesFromSimplifiedJSON(req.body.podEntries);
+      const podEntries = podEntriesFromJSON(JSON.parse(req.body.podEntries));
       const signerPrivateKey = req.body.signerPrivateKey;
       const podFolder = req.body.podFolder;
 

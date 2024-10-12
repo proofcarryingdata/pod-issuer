@@ -204,7 +204,7 @@ export const mintPODAndSerialise = async (
   pcd: SemaphoreSignaturePCD | EmailPCD | GPCPCD,
 ): Promise<string> => {
   const mintedPOD = await mintPOD(podId, pcd);
-  return mintedPOD.serialize();
+  return JSON.stringify(mintedPOD.toJSON());
 };
 
 /**
