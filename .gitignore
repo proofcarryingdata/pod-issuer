@@ -1,2 +1,5 @@
 credentials.json
 pods.json
+serverConfig.json
+node_modules
+vendor
