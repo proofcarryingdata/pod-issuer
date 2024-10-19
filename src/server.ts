@@ -1,6 +1,6 @@
 import { EmailPCD, EmailPCDPackage } from "@pcd/email-pcd";
 import { GPCPCD, GPCPCDPackage } from "@pcd/gpc-pcd";
-import { podEntriesFromJSON } from "@pcd/pod";
+import { podEntriesFromJSON, podEntriesToJSON } from "@pcd/pod";
 import { PODPCD, PODPCDPackage } from "@pcd/pod-pcd";
 import {
     SemaphoreSignaturePCD,
@@ -8,7 +8,7 @@ import {
 } from "@pcd/semaphore-signature-pcd";
 import bodyParser from "body-parser";
 import cors from "cors";
-import express from "express";
+import express, { Request, Response } from "express";
 import basicAuth from "express-basic-auth";
 import { credentials, serverConfig, siteDir } from "./constants.ts";
 import {
@@ -54,29 +54,29 @@ export const serverStart = () => {
   app.use("/addPOD", express.static(siteDir));
 
   // Mintable POD getter for admin page.
-  app.get("/api/getMintablePODs", (_req, res) => {
+  app.get("/api/getMintablePODs", (_req: Request, res: Response) => {
     res.send(JSON.stringify(getMintablePODs()));
   });
 
   // Mintable POD remover (by ID) for admin page.
-  app.get("/api/removeMintablePOD/:podId", (req, res) => {
+  app.get("/api/removeMintablePOD/:podId", (req: Request, res: Response) => {
     const podId = req.params.podId;
     removeMintablePOD(podId);
     res.status(200).send(`POD ${podId} successfully removed.`);
   });
 
   // POD content fetcher for users.
-  app.get("/api/getPODContent/:podId", (req, res) => {
+  app.get("/api/getPODContent/:podId", (req: Request, res: Response) => {
     const podContent = getPODContent(req.params.podId);
     if (podContent) {
-      res.send(JSON.stringify(podContent.toJSON()));
+      res.send(JSON.stringify(podEntriesToJSON(podContent)));
     } else {
       res.status(404).send(`POD ${req.params.podId} not found.`);
     }
   });
 
   // POD minting API for users.
-  app.post("/api/mintPOD", async (req, res) => {
+  app.post("/api/mintPOD", async (req: Request, res: Response) => {
     try {
       const contentIDString = req.body.contentID;
 
@@ -114,7 +114,7 @@ export const serverStart = () => {
 
    */
   // Alternative POD minting API for users that returns a serialised PODPCD.
-  app.post("/api/sign", async (req, res) => {
+  app.post("/api/sign", async (req: Request, res: Response) => {
     try {
       const contentIDString = req.body.contentID;
 
@@ -156,7 +156,7 @@ export const serverStart = () => {
 
   // POD mint link getter for users. Convenient for keeping the address short.
   // TODO: Use an identifier shorter than the content ID!
-  app.get("/api/getMintLink/:podId", (req, res) => {
+  app.get("/api/getMintLink/:podId", (req: Request, res: Response) => {
     const podId = req.params.podId;
     const mintLink: string | undefined = podId && getMintLink(podId);
 
@@ -168,7 +168,7 @@ export const serverStart = () => {
   });
 
   // Mintable POD adder for admin page.
-  app.post("/api/addMintablePOD", async (req, res) => {
+  app.post("/api/addMintablePOD", async (req: Request, res: Response) => {
     try {
       const podEntries = podEntriesFromJSON(JSON.parse(req.body.podEntries));
       const signerPrivateKey = req.body.signerPrivateKey;
