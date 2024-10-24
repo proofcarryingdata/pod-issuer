@@ -154,16 +154,17 @@ export const mintPOD = async (
       // Check timestamp and GPC proof.
       const currentTime = BigInt(Date.now());
       const timestampString =pcd.claim.revealed.owner?.externalNullifier?.value;
-      const nullifierHash = pcd.claim.revealed.owner?.nullifierHash;
+      const nullifierHash = pcd.claim.revealed.owner?.nullifierHashV4
+        || pcd.claim.revealed.owner?.nullifierHashV3;
       if (!nullifierHash) {
         return [0n, false];
       } else if (podStore[podId]?.nullifiers?.[String(nullifierHash)]) {
         throw new Error("GPC identity proof nullifier already used.");
       }
       return [
-        pcd.claim.revealed.pods.pod0?.entries.owner?.value ?? 0n,
-        pcd.claim.config.pods.pod0.entries.owner.isRevealed && 
-        pcd.claim.config.pods.pod0.entries.owner.isOwnerID 
+        pcd.claim.revealed.pods.pod0?.entries?.owner?.value ?? 0n,
+        pcd.claim.config.pods.pod0?.entries?.owner.isRevealed && 
+        pcd.claim.config.pods.pod0?.entries?.owner.isOwnerID 
           && timestampString &&
           ((currentTime - BigInt(timestampString)) < TIMESTAMP_EXPIRY_TIME) &&
           await GPCPCDPackage.verify(pcd)
@@ -189,7 +190,10 @@ export const mintPOD = async (
       if(!podStore[podId].nullifiers) {
         podStore[podId].nullifiers = {};
       }
-        podStore[podId].nullifiers[String(pcd.claim.revealed.owner.nullifierHash)] = true;
+        podStore[podId].nullifiers[String(
+          pcd.claim.revealed.owner?.nullifierHashV4
+          || pcd.claim.revealed.owner?.nullifierHashV3
+        )] = true;
       }
       
       return mintedPOD;
@@ -204,7 +208,7 @@ export const mintPODAndSerialise = async (
   pcd: SemaphoreSignaturePCD | EmailPCD | GPCPCD,
 ): Promise<string> => {
   const mintedPOD = await mintPOD(podId, pcd);
-  return mintedPOD.serialize();
+  return JSON.stringify(mintedPOD.toJSON());
 };
 
 /**

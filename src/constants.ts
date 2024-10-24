@@ -1,14 +1,16 @@
 import { GPCPCDPackage } from "@pcd/gpc-pcd";
 import * as path from "@std/path";
 import JSONBig from "json-bigint";
-import { PODStore } from "./types.ts";
+import { PODStore, ServerConfig } from "./types.ts";
 
 // Timestamp expiry time = 1 minute
 export const TIMESTAMP_EXPIRY_TIME = 60000;
 
+const dirname = import.meta.dirname || "";
+
 // Initialise GPCPCDPackage
-const zkArtifactPath = path.join(import.meta.dirname, "..", "node_modules/.deno/@pcd+proto-pod-gpc-artifacts@0.5.0/node_modules/@pcd/proto-pod-gpc-artifacts");
-await GPCPCDPackage.init({zkArtifactPath});
+const zkArtifactPath = path.join(dirname, "..", "node_modules/.deno/@pcd+proto-pod-gpc-artifacts@0.5.0/node_modules/@pcd/proto-pod-gpc-artifacts");
+await GPCPCDPackage.init?.({zkArtifactPath});
 
 export const jsonBig = JSONBig({
   useNativeBigInt: true,
@@ -16,14 +18,14 @@ export const jsonBig = JSONBig({
 });
 
 // Load config
-export const configDir = path.join(import.meta.dirname, "..");
+export const configDir = path.join(dirname, "..");
 export const configFile = "serverConfig.json";
 
-export const dataDir = path.join(import.meta.dirname, "..");
+export const dataDir = path.join(dirname, "..");
 export const podStoreFile = "pods.json";
 export const credentialFile = "credentials.json";
 
-export const siteDir = path.join(import.meta.dirname, "..", "public");
+export const siteDir = path.join(dirname, "..", "public");
 
 export const serverConfig: ServerConfig = JSON.parse(
   await Deno.readTextFile(path.join(configDir, configFile)),
